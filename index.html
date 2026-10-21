@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title>Googled — Administração</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root { font-family: Arial, sans-serif; color: #202124; background: #f1f3f4; }
+    body { margin: 0; min-height: 100vh; padding: 24px 16px; display: grid; place-items: center; }
+    main { width: 100%; max-width: 480px; padding: 28px; background: white; border: 1px solid #dadce0; border-radius: 20px; box-shadow: 0 4px 24px #0000000c; }
+    h1 { text-align: center; font-size: 26px; font-weight: 500; }
+    .subtitle { color: #5f6368; text-align: center; line-height: 1.5; }
+    label { display: block; margin: 20px 0 7px; font-size: 14px; font-weight: 600; }
+    input { width: 100%; min-height: 48px; padding: 12px; border: 1px solid #dadce0; border-radius: 8px; background: white; font-size: 16px; }
+    input:focus { outline: 2px solid #1a73e8; outline-offset: 1px; }
+    button { min-height: 44px; padding: 10px 16px; border: 0; border-radius: 8px; background: #1a73e8; color: white; font-size: 14px; font-weight: 600; cursor: pointer; }
+    button:hover { background: #1765cc; }
+    .primary { width: 100%; margin-top: 16px; }
+    .status { min-height: 24px; margin: 14px 0; font-size: 14px; overflow-wrap: anywhere; }
+    details { margin-top: 26px; padding-top: 20px; border-top: 1px solid #dadce0; }
+    summary { padding: 8px 0; cursor: pointer; font-weight: 600; }
+    .notice { color: #5f6368; font-size: 13px; line-height: 1.5; }
+    .record { padding: 13px 0; border-bottom: 1px solid #eee; overflow-wrap: anywhere; }
+    .record small { display: block; margin-top: 5px; color: #5f6368; }
+    .secondary { margin-top: 14px; background: #e8f0fe; color: #174ea6; }
+    .secondary:hover { background: #d2e3fc; }
+    .empty { color: #5f6368; font-size: 14px; }
+    footer { margin-top: 22px; color: #5f6368; font-size: 12px; text-align: center; }
+    @media (max-width: 400px) { main { padding: 22px 18px; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Googled</h1>
+  <p class="subtitle">Registro e consulta de e-mails</p>
+
+  <form id="form">
+    <label for="email">Endereço de e-mail</label>
+    <input id="email" type="email" autocomplete="email"
+      placeholder="nome@exemplo.com" maxlength="254" required>
+    <button class="primary" type="submit">Registrar e-mail</button>
+  </form>
+
+  <p id="status" class="status" role="status" aria-live="polite"></p>
+
+  <details>
+    <summary>Consultar registros</summary>
+    <p class="notice">
+      Os registros ficam salvos somente neste navegador. Este formulário
+      registra e-mails informados voluntariamente; não autentica contas Google.
+    </p>
+    <p id="count">Total: 0 e-mails</p>
+    <div id="records"><p class="empty">Nenhum registro encontrado.</p></div>
+    <button class="secondary" id="refresh" type="button">Atualizar lista</button>
+  </details>
+
+  <footer>Googled — demonstração de registro de e-mails</footer>
+</main>
+
+<script>
+(() => {
+  "use strict";
+  const STORAGE_KEY = "googled_email_records_v1";
+  const $ = id => document.getElementById(id);
+
+  function readRecords() {
+    try {
+      const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+      if (!Array.isArray(value)) return [];
+      return value.filter(record =>
+        record && typeof record.email === "string" &&
+        typeof record.date === "string"
+      );
+    } catch {
+      return [];
+    }
+  }
+
+  function renderRecords() {
+    const records = readRecords();
+    const container = $("records");
+    container.replaceChildren();
+    $("count").textContent = "Total: " + records.length +
+      (records.length === 1 ? " e-mail" : " e-mails");
+
+    if (!records.length) {
+      const empty = document.createElement("p");
+      empty.className = "empty";
+      empty.textContent = "Nenhum registro encontrado.";
+      container.appendChild(empty);
+      return;
+    }
+
+    [...records].reverse().forEach(record => {
+      const article = document.createElement("div");
+      article.className = "record";
+      const email = document.createElement("strong");
+      email.textContent = record.email;
+      const date = document.createElement("small");
+      date.textContent = "Registrado em: " + record.date;
+      article.append(email, date);
+      container.appendChild(article);
+    });
+  }
+
+  $("form").addEventListener("submit", event => {
+    event.preventDefault();
+    const email = $("email").value.trim();
+
+    if (!$("email").checkValidity() || !email) {
+      $("status").textContent = "Digite um endereço de e-mail válido.";
+      return;
+    }
+
+    const records = readRecords();
+    if (records.some(record => record.email.toLowerCase() === email.toLowerCase())) {
+      $("status").textContent = "Este e-mail já está registrado neste navegador.";
+      return;
+    }
+
+    records.push({ email, date: new Date().toLocaleString("pt-BR") });
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+      $("status").textContent = "E-mail registrado com sucesso.";
+      $("form").reset();
+      renderRecords();
+    } catch {
+      $("status").textContent = "Não foi possível salvar. Verifique o espaço disponível.";
+    }
+  });
+
+  $("refresh").addEventListener("click", renderRecords);
+  renderRecords();
+})();
+</script>
+</body>
+</html>
